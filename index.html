@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="ru">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><meta name="theme-color" content="#0b0c12" /><title>
+    Лира — комната общения</title
+  ><link rel="stylesheet" href="style.css" />
+  <body>
+    <header>
+      <div class="top">
+        <div class="brand">
+          <svg viewBox="0 0 40 40" fill="none">
+            <g
+              stroke="currentColor"
+              stroke-width="1.8"
+              transform="rotate(-38 20 20)"
+            >
+              <ellipse cx="20" cy="20" rx="17" ry="8" />
+              <ellipse cx="20" cy="20" rx="10" ry="16" />
+            </g>
+            <circle cx="20" cy="20" r="3.2" fill="currentColor" /></svg
+          >Лира <span class="brandtag">AI COMPANION</span>
+        </div>
+        <button class="settings" onclick="showSettings()">
+          <i data-i="sliders"></i><span>Настройки</span>
+        </button>
+      </div>
+    </header>
+    <main>
+      <div class="eyebrow"><b></b>COMPANION SPACE</div>
+      <div class="heading">
+        <h1>Комната общения</h1>
+        <span class="session"><em></em>Сессия активна</span>
+      </div>
+      <section class="stage" id="stage">
+        <div class="sky"></div>
+        <canvas
+          id="portrait"
+          width="576"
+          height="768"
+          aria-label="Анимированный портрет Лиры"
+        ></canvas>
+        <div class="shade"></div>
+        <div class="live"><em></em> LIVE</div>
+        <button
+          class="sceneTrigger"
+          id="changeScene"
+          aria-haspopup="dialog"
+          title="Изменить фон сцены"
+        >
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="16" rx="3" />
+            <path d="m4 17 5-6 4 4 3-3 5 5" />
+            <circle cx="16" cy="9" r="1" /></svg
+          >Фон
+        </button>
+        <button class="expand" id="expand" aria-label="Развернуть портрет">
+          <i data-i="expand"></i>
+        </button>
+        <div class="identity">
+          <small>ВИРТУАЛЬНЫЙ КОМПАНЬОН</small>
+          <h2>Лира<span>✧</span></h2>
+          <span class="state"
+            ><em></em><span id="status">Готова к разговору</span></span
+          >
+        </div>
+        <div class="signal">
+          <div class="bars" id="bars"></div>
+          <small>VOICE SIGNAL</small>
+        </div>
+      </section>
+      <div class="toolbar">
+        <div class="voicebuttons">
+          <button id="mic" class="primary" aria-describedby="ptthelp">
+            <i data-i="mic"></i><span>Зажмите и говорите</span></button
+          ><button
+            id="sound"
+            class="square"
+            title="Выключить озвучку"
+            aria-label="Выключить озвучку"
+          >
+            <i data-i="speaker"></i>
+          </button>
+        </div>
+        <button id="historyBtn" class="history">
+          <i data-i="history"></i>История
+        </button>
+      </div>
+      <div class="ptthelp" id="ptthelp">
+        <kbd>Пробел</kbd> или кнопка — удерживайте, чтобы говорить. Можно
+        перебивать.
+      </div>
+      <p id="notice" role="status" hidden></p>
+      <section class="chat">
+        <div class="chatheading">
+          <span class="chatIcon"><i data-i="chat"></i></span>
+          <h3>Текстовый чат</h3>
+          <span class="rule"></span><small>TEXT CHANNEL</small>
+        </div>
+        <div id="last" aria-live="polite"></div>
+        <form id="form">
+          <input
+            id="input"
+            maxlength="2000"
+            placeholder="Напишите Лире сообщение…"
+            aria-label="Сообщение Лире"
+            autocomplete="off"
+          /><button class="send" aria-label="Отправить">
+            <i data-i="send"></i>
+          </button>
+        </form>
+        <div class="chips">
+          <button>Как твои дела?</button><button>Расскажи о себе</button
+          ><button>Давай помечтаем</button>
+        </div>
+      </section>
+      <footer>
+        <span><b></b> LYRA INTERFACE</span><span>ВЕРСИЯ 2.3</span>
+      </footer>
+    </main>
+    <dialog id="settingsDialog">
+      <div class="modalhead">
+        <h3>Настройки</h3>
+        <button
+          class="close"
+          aria-label="Закрыть"
+          onclick="this.closest('dialog').close()"
+        >
+          ×
+        </button>
+      </div>
+      <small class="sub">01 / ДИАЛОГ</small
+      ><label
+        >Модель диалога<select id="engine">
+          <option value="demo">Демонстрационный</option>
+          <option value="ollama">Локальная модель · Ollama</option>
+          <option value="compatible">LM Studio / OpenAI-совместимый API</option>
+        </select></label
+      >
+      <div id="modelrow" hidden>
+        <label
+          >Модель<input
+            id="model"
+            list="models"
+            maxlength="256"
+            placeholder="Введите ID или выберите из списка" /><datalist
+            id="models"
+          ></datalist></label
+        ><button class="settings" id="refresh">Получить список моделей</button>
+        <p id="modelInfo" role="status"></p>
+      </div>
+      <small class="sub">02 / ГОЛОС</small
+      ><label
+        >Распознавание речи<select id="asr">
+          <option value="local">Локальный Vosk · русский</option>
+          <option value="browser">Сервис браузера</option>
+        </select></label
+      ><label
+        >Управление микрофоном<select id="micMode">
+          <option value="hold">Удерживать кнопку (push to talk)</option>
+          <option value="toggle">Нажать для начала фразы</option>
+        </select></label
+      ><label>Голос персонажа<select id="voices"></select></label
+      ><label
+        >Скорость речи<input
+          id="rate"
+          type="range"
+          min="0.7"
+          max="1.4"
+          step="0.1"
+      /></label>
+      <div class="voiceStudio">
+        <canvas
+          id="facemon"
+          width="144"
+          height="152"
+          aria-label="Мимика выбранного персонажа"
+        ></canvas>
+        <div>
+          <button type="button" class="settings" id="voiceTest">
+            ▶ Послушать голос
+          </button>
+          <p id="voiceInfo" role="status">
+            Сравните голоса на одной и той же фразе.
+          </p>
+        </div>
+      </div>
+      <p>
+        Vosk распознаёт речь на устройстве. При первом обращении загружается
+        модель из комплекта (45 МБ). В режиме «Сервис браузера» возможна
+        облачная обработка.
+      </p>
+      <small class="sub">03 / АВАТАР</small>
+      <label
+        >Видимость зубов при речи<input
+          id="dental"
+          type="range"
+          min="0"
+          max="1"
+          value="0.9"
+          step="0.05"
+      /></label>
+      <div class="avatarRow">
+        <div>
+          <b id="avatarName">Портрет Лиры</b>
+          <p>Смените внешность, сохранив голос и диалог.</p>
+        </div>
+        <button class="settings" id="changeAvatar">Изменить</button>
+      </div>
+      <button class="primary" id="save">Сохранить</button>
+    </dialog>
+    <dialog id="sceneDialog" aria-labelledby="sceneTitle">
+      <div class="modalhead">
+        <div>
+          <small class="sceneKicker">SCENE LIBRARY</small>
+          <h3 id="sceneTitle">Фон комнаты</h3>
+        </div>
+        <button
+          class="close"
+          aria-label="Закрыть"
+          onclick="this.closest('dialog').close()"
+        >
+          ×
+        </button>
+      </div>
+      <p>
+        Выберите атмосферу для разговора. Фон меняется сразу, портрет остаётся
+        прежним.
+      </p>
+      <div id="scenes" role="group" aria-label="Доступные фоны"></div>
+      <label class="fileLabel"
+        >＋ Загрузить свой фон<input
+          type="file"
+          id="sceneFile"
+          accept="image/jpeg,image/png,image/webp"
+      /></label>
+      <p class="sceneHelp">
+        JPG, PNG или WebP · до 12 МБ. Изображение хранится только в этом
+        браузере.
+      </p>
+      <p id="sceneMsg" role="status"></p>
+      <div class="sceneFooter">
+        <button id="deleteScene" class="textBtn" hidden>Удалить свой фон</button
+        ><button class="primary" id="sceneDone">Готово</button>
+      </div>
+    </dialog>
+    <dialog id="historyDialog">
+      <div class="modalhead">
+        <h3>История разговора</h3>
+        <button
+          class="close"
+          aria-label="Закрыть"
+          onclick="this.closest('dialog').close()"
+        >
+          ×
+        </button>
+      </div>
+      <div id="log"></div>
+      <button class="settings" id="clear">Очистить историю</button>
+    </dialog>
+    <dialog id="photoDialog">
+      <div class="modalhead">
+        <h3>Студия портрета</h3>
+        <button
+          class="close"
+          aria-label="Закрыть"
+          onclick="this.closest('dialog').close()"
+        >
+          ×
+        </button>
+      </div>
+      <p>
+        Подойдёт чёткое фото анфас с открытыми глазами и сомкнутыми губами.
+        Используйте свой снимок или фото с согласия человека. Изображение
+        остаётся в этом браузере.
+      </p>
+      <label class="fileLabel"
+        >Выбрать фото<input
+          id="file"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+      /></label>
+      <div id="prep" hidden>
+        <label class="check"
+          ><input type="checkbox" id="cut" checked />Убрать однотонный
+          фон</label
+        ><label
+          >Допуск цвета фона<input
+            type="range"
+            id="tolerance"
+            min="6"
+            max="95"
+            value="36"
+        /></label>
+        <p id="prepInfo"></p>
+        <button class="settings" id="exportWebp">Скачать WebP</button>
+      </div>
+      <p id="guide" aria-live="polite">Форматы: JPG, PNG, WebP · до 12 МБ</p>
+      <div id="sheet" hidden>
+        <canvas id="marks" aria-label="Разметьте лицо по подсказкам"></canvas>
+      </div>
+      <div class="photoActions">
+        <button class="settings" id="undo" hidden>Шаг назад</button
+        ><button class="primary" id="applyPhoto" hidden>Применить</button>
+      </div>
+      <button class="textBtn" id="restore">Вернуть портрет Лиры</button>
+    </dialog>
+    <script src="app.js"></script>
+    <script src="speech.js"></script>
+    <script src="avatar.js"></script>
+    <script src="matte.js"></script>
+    <script src="background.js"></script>
+    <script src="photo.js"></script>
+    <script src="local-asr.js"></script>
+    <script src="voice.js"></script>
+  </body>
+</html>
