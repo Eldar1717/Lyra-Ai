@@ -36,10 +36,29 @@ function complete(s) {
   listen = null;
   state("idle");
   const text = (s.previous + " " + s.current).trim();
-  if (text) send(text);
+  deliverVoice(text, s.uncertain);
+}
+function deliverVoice(text, uncertain) {
+  const review = prefs.asrReview || "smart";
+  if (
+    text &&
+    (review === "all" ||
+      (review === "smart" &&
+        (uncertain ||
+          /(?:запомни|забудь|напомни|контакт|исправь имя|зовут|друзья|друг(?:а|у)? |подруг)/iu.test(
+            text,
+          ))))
+  ) {
+    $("input").value = text;
+    $("input").focus();
+    notice(
+      "Проверьте распознанный текст, особенно имена. Enter или стрелка отправит фразу. Пока ничего не записано.",
+    );
+  } else if (text) send(text);
   else notice("Не услышала фразу. Удерживайте кнопку, пока говорите.");
 }
 function begin(owner) {
+  window.pauseWake?.();
   discard();
   notice("");
   const R =
@@ -65,6 +84,7 @@ function begin(owner) {
     const valid = () => listen === r && session === s && s.id === token;
     r.onresult = (e) => {
       if (!valid()) return;
+      s.uncertain = !!r.uncertain;
       s.current = Array.from(e.results, (v) => v[0].transcript.trim())
         .filter(Boolean)
         .join(" ");
@@ -175,3 +195,118 @@ document.addEventListener("visibilitychange", () => {
 });
 state("idle");
 updateHint();
+
+// Only final Vosk segments enter this gate. No pre-wake transcript is retained.
+(() => {
+  const btn = $("wakeToggle"),
+    hint = $("wakeHint"),
+    field = $("input");
+  let enabled = false,
+    rec = null,
+    resume = null,
+    expiry = null,
+    until = 0;
+  const waiting = "Микрофон включён · скажите «Лира, который час?»";
+  function closeGate() {
+    clearTimeout(expiry);
+    until = 0;
+  }
+  function pause() {
+    clearTimeout(resume);
+    closeGate();
+    const r = rec;
+    rec = null;
+    r?.abort();
+    if (enabled) hint.textContent = "Ожидание «Лира» на паузе";
+  }
+  function disable(message) {
+    enabled = false;
+    pause();
+    btn.setAttribute("aria-pressed", "false");
+    btn.textContent = "Включить «Лира»";
+    hint.textContent =
+      message || "Голосовая активация выключена · микрофон вручную";
+  }
+  function allowed() {
+    return (
+      enabled &&
+      !document.hidden &&
+      mode === "idle" &&
+      !utter &&
+      !field.value &&
+      !document.querySelector("dialog[open]")
+    );
+  }
+  function start() {
+    if (rec || !allowed()) return;
+    const r = (rec = new OfflineRecognizer());
+    r.continuous = true;
+    hint.textContent =
+      "Подготовка локального распознавания и доступа к микрофону…";
+    r.onReady = () => {
+      if (rec === r) hint.textContent = waiting;
+    };
+    r.onerror = (e) => {
+      if (rec === r)
+        disable(
+          e.error === "not-allowed"
+            ? "Нет разрешения на микрофон. Разрешите доступ и включите режим снова."
+            : "Ожидание выключено: " + (e.message || e.error),
+        );
+    };
+    r.onSegment = (text, uncertain) => {
+      if (r !== rec || !allowed()) return;
+      const match = /^лира(?=$|[\s,!:?.—–-])[\s,!:?.—–-]*(.*)$/iu.exec(
+        text.trim(),
+      );
+      if (!match && !(until && performance.now() < until)) return;
+      const command = (match ? match[1] : text).trim();
+      closeGate();
+      if (!command) {
+        until = performance.now() + 8000;
+        hint.textContent = "Лира слушает · скажите вопрос в течение 8 секунд";
+        expiry = setTimeout(() => {
+          closeGate();
+          if (r === rec) hint.textContent = waiting;
+        }, 8000);
+      } else {
+        pause();
+        deliverVoice(command, uncertain);
+        sync();
+      }
+    };
+    r.start();
+  }
+  function sync() {
+    clearTimeout(resume);
+    if (!allowed()) {
+      pause();
+      return;
+    }
+    if (!rec) resume = setTimeout(start, 700);
+  }
+  btn.onclick = () => {
+    if (enabled) {
+      disable();
+      return;
+    }
+    enabled = true;
+    btn.setAttribute("aria-pressed", "true");
+    btn.textContent = "Выключить «Лира»";
+    if (allowed()) start();
+    else sync();
+  };
+  window.pauseWake = pause;
+  window.wakeStateChanged = sync;
+  field.addEventListener("input", sync);
+  new MutationObserver(sync).observe(document.body, {
+    attributes: true,
+    subtree: true,
+    attributeFilter: ["open"],
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && enabled)
+      disable("Вкладка скрыта · для активации включите «Лира» снова.");
+  });
+  window.addEventListener("pagehide", () => disable());
+})();

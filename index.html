@@ -29,6 +29,7 @@
     </header>
     <main>
       <div class="eyebrow"><b></b>COMPANION SPACE</div>
+      <section id="dueBox" aria-live="polite" hidden></section>
       <div class="heading">
         <h1>Комната общения</h1>
         <span class="session"><em></em>Сессия активна</span>
@@ -91,6 +92,63 @@
         <kbd>Пробел</kbd> или кнопка — удерживайте, чтобы говорить. Можно
         перебивать.
       </div>
+      <div class="wakeBar">
+        <button
+          type="button"
+          class="settings"
+          id="wakeToggle"
+          aria-pressed="false"
+          aria-describedby="wakeHint"
+        >
+          Включить «Лира»</button
+        ><small id="wakeHint" role="status"
+          >Голосовая активация выключена · микрофон вручную</small
+        >
+      </div>
+      <details class="clonePanel" id="cameraPanel">
+        <summary>Камера · узнать меня и посмотреть кадр</summary>
+        <p>
+          Видеозаписи нет. Образец лица хранится в этом браузере. Только по
+          вопросу о кадре один снимок отправляется в локальную Ollama.
+        </p>
+        <button
+          type="button"
+          id="cameraToggle"
+          class="settings"
+          aria-pressed="false"
+        >
+          Включить камеру
+        </button>
+        <video
+          muted
+          autoplay
+          playsinline
+          hidden
+          id="cameraVideo"
+          aria-label="Предпросмотр камеры"
+        ></video>
+        <div class="cameraActions">
+          <button type="button" id="cameraEnroll" class="settings" disabled>
+            Запомнить моё лицо</button
+          ><button type="button" id="cameraMatch" class="settings" disabled>
+            Ты меня узнаёшь?</button
+          ><button type="button" id="cameraForget" class="textBtn" disabled>
+            Удалить образец лица
+          </button>
+        </div>
+        <form id="cameraForm">
+          <label>Модель зрения (локальная Ollama)<select id="visionModel"><option value="gemma3:4b">Gemma 3 · 4B</option><option value="lfm3-omni">LFM3-Omni · 2B</option></select></label>
+          <label
+            >Вопрос по текущему кадру<input
+              id="cameraQuestion"
+              maxlength="2000"
+              placeholder="Например: какого цвета кружка?" /></label
+          ><button id="cameraAsk" class="settings" disabled>
+            Спросить по кадру
+          </button>
+        </form>
+        <p role="status" id="cameraStatus">Камера выключена.</p>
+      </details>
       <p id="notice" role="status" hidden></p>
       <section class="chat">
         <div class="chatheading">
@@ -116,7 +174,7 @@
         </div>
       </section>
       <footer>
-        <span><b></b> LYRA INTERFACE</span><span>ВЕРСИЯ 2.3</span>
+        <span><b></b> LYRA INTERFACE</span><span>ВЕРСИЯ 2.12.1</span>
       </footer>
     </main>
     <dialog id="settingsDialog">
@@ -157,6 +215,21 @@
           <option value="browser">Сервис браузера</option>
         </select></label
       ><label
+        >Проверять распознанный текст<select id="asrReview">
+          <option value="smart">
+            Имена, команды памяти и неуверенные слова
+          </option>
+          <option value="all">Каждую фразу перед отправкой</option>
+          <option value="off">Отправлять сразу</option>
+        </select></label
+      ><label
+        >Обработка звука Vosk<select id="asrFilter">
+          <option value="normal">Шумоподавление и эхоподавление</option>
+          <option value="headset">
+            Гарнитура в тихой комнате · без фильтров
+          </option>
+        </select></label
+      ><label
         >Управление микрофоном<select id="micMode">
           <option value="hold">Удерживать кнопку (push to talk)</option>
           <option value="toggle">Нажать для начала фразы</option>
@@ -170,6 +243,51 @@
           max="1.4"
           step="0.1"
       /></label>
+      <details id="clonePanel" class="clonePanel">
+        <summary>Свой голос · локальный XTTS-v2</summary>
+        <p>
+          Выберите запись одного человека без музыки и других голосов. Подойдёт
+          WAV, MP3 или OGG, если браузер умеет его читать. Повторная запись и
+          расшифровка не нужны.
+        </p>
+        <div id="cloneInputs">
+          <label
+            >Голосовая запись · до 16 МБ<input
+              type="file"
+              id="cloneFile"
+              accept="audio/*,.ogg,.oga,.opus,.m4a"
+          /></label>
+          <label
+            >Начало фрагмента, сек.<input
+              type="number"
+              id="cloneStart"
+              value="0"
+              min="0"
+              step="1"
+          /></label>
+          <audio
+            controls
+            hidden
+            id="clonePreview"
+            aria-label="Выбранный фрагмент"
+          ></audio>
+          <label class="memCheck"
+            ><input type="checkbox" id="cloneConsent" />Это мой голос или у меня
+            есть согласие человека на клонирование.</label
+          >
+          <button type="button" id="cloneSave" class="settings" disabled>
+            Сохранить образец
+          </button>
+          <button type="button" id="cloneDelete" class="textBtn" disabled>
+            Удалить образец
+          </button>
+        </div>
+        <p role="status" id="cloneStatus"></p>
+        <small
+          >Для синтеза установите модель по инструкции XTTS.md. Голос
+          искусственно синтезирован.</small
+        >
+      </details>
       <div class="voiceStudio">
         <canvas
           id="facemon"
@@ -208,6 +326,14 @@
         </div>
         <button class="settings" id="changeAvatar">Изменить</button>
       </div>
+      <small class="sub">04 / ПАМЯТЬ</small>
+      <div class="avatarRow">
+        <div>
+          <b>Что я помню</b>
+          <p>Факты из разговоров, отдельно от истории чата.</p>
+        </div>
+        <button id="openMemory" class="settings">Открыть</button>
+      </div>
       <button class="primary" id="save">Сохранить</button>
     </dialog>
     <dialog id="sceneDialog" aria-labelledby="sceneTitle">
@@ -243,6 +369,63 @@
       <div class="sceneFooter">
         <button id="deleteScene" class="textBtn" hidden>Удалить свой фон</button
         ><button class="primary" id="sceneDone">Готово</button>
+      </div>
+    </dialog>
+    <dialog id="memoryDialog" aria-labelledby="memTitle">
+      <div class="modalhead">
+        <div>
+          <small class="sceneKicker">MEMORY / SQLITE</small>
+          <h3 id="memTitle">Что я помню</h3>
+        </div>
+        <button
+          class="close"
+          aria-label="Закрыть"
+          onclick="this.closest('dialog').close()"
+        >
+          ×
+        </button>
+      </div>
+      <label class="memCheck"
+        ><input type="checkbox" id="memEnabled" />Запоминать факты из
+        разговора</label
+      >
+      <p>
+        Скажите «Запомни: у Антона кот Барсик» или расскажите о себе: «Я работаю
+        в библиотеке». Факты сохраняются в базе на компьютере с сервером Лиры.
+      </p>
+      <small class="sub">ЗАПИСИ · <span id="factCount">0</span></small
+      ><label
+        >Поиск<input
+          type="search"
+          id="factSearch"
+          placeholder="Например, Барсик"
+      /></label>
+      <div id="factRows"></div>
+      <label
+        >Текст факта<textarea
+          id="factInput"
+          maxlength="800"
+          rows="2"
+        ></textarea></label
+      ><button class="settings" id="factPut">Добавить факт</button>
+      <p id="memStatus" role="status"></p>
+      <button class="textBtn" id="memImport" hidden>
+        Перенести старую память
+      </button>
+      <small class="sub">КОНТЕКСТ ДИАЛОГА</small
+      ><label class="memCheck"
+        ><input type="checkbox" id="memLocal" />Использовать факты в ответах
+        Ollama</label
+      ><label class="memCheck"
+        ><input type="checkbox" id="memExternal" />Передавать факты совместимому
+        API (может быть облачным)</label
+      >
+      <label>Город для погоды<input id="bookCity" maxlength="80" /></label
+      ><small class="sub">НАПОМИНАНИЯ</small>
+      <div id="bookRows"></div>
+      <div class="sceneFooter">
+        <button class="textBtn" id="memClear">Удалить все факты</button
+        ><button class="primary" id="memSave">Сохранить настройки</button>
       </div>
     </dialog>
     <dialog id="historyDialog">
@@ -307,12 +490,16 @@
       <button class="textBtn" id="restore">Вернуть портрет Лиры</button>
     </dialog>
     <script src="app.js"></script>
+    <script src="memory.js"></script>
+    <script src="daily.js"></script>
     <script src="speech.js"></script>
+    <script src="clone-ui.js"></script>
     <script src="avatar.js"></script>
     <script src="matte.js"></script>
     <script src="background.js"></script>
     <script src="photo.js"></script>
     <script src="local-asr.js"></script>
     <script src="voice.js"></script>
+    <script src="camera.js"></script>
   </body>
 </html>

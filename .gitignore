@@ -1,11 +1,42 @@
-__pycache__/
-*.py[cod]
-.venv/
+# Local state: facts, private voice samples, downloaded XTTS weights
+/data/
+/uploads/
+/recordings/
+/voice-start/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.wav
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+*.gguf
+
+# Secrets and machine-specific settings
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+
+# Environments, caches and local tools
+.venv/
+venv/
+__pycache__/
+*.py[cod]
 .cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
 .DS_Store
+__MACOSX/
 Thumbs.db
-uploads/
+*.log
+
+# Distribution and old update files. Keep the bundled ASR .tar.gz.
 *.zip
+/Lyra*.patch

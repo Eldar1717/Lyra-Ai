@@ -72,8 +72,9 @@ class OfflineRecognizer {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
-        echoCancellation: true,
-        noiseSuppression: true,
+        echoCancellation: prefs.asrFilter !== "headset",
+        noiseSuppression: prefs.asrFilter !== "headset",
+        autoGainControl: prefs.asrFilter !== "headset",
       },
     });
     if (this.closed || this.ending) {
@@ -84,29 +85,67 @@ class OfflineRecognizer {
     await ready;
     if (this.closed || this.ending) return;
     this.source = this.ctx.createMediaStreamSource(stream);
-    this.node = this.ctx.createScriptProcessor(1024, 1, 1);
     const rate = this.ctx.sampleRate;
-    this.node.onaudioprocess = (e) => {
-      if (this.closed || this.ending) return;
-      const samples = new Float32Array(e.inputBuffer.getChannelData(0));
+    const push = (samples) => {
+      if (this.closed || this.drained) return;
       this.gotAudio = true;
       if (this.rec) this.rec.acceptWaveformFloat(samples, rate);
-      else this.queue.push(samples);
+      else if (!this.onSegment) this.queue.push(samples);
     };
+    if (this.ctx.audioWorklet) {
+      try {
+        await this.ctx.audioWorklet.addModule("audio-capture.js");
+        if (this.closed || this.ending) return;
+        this.node = new AudioWorkletNode(this.ctx, "lyra-pcm");
+        this.worklet = true;
+        this.node.port.onmessage = (e) => {
+          if (e.data === "flushed") {
+            this.endCapture();
+            return;
+          }
+          if (e.data instanceof Float32Array) push(e.data);
+        };
+      } catch {
+        if (this.closed || this.ending) return;
+      }
+    }
+    if (!this.node) {
+      this.node = this.ctx.createScriptProcessor(512, 1, 1);
+      this.node.onaudioprocess = (e) =>
+        push(new Float32Array(e.inputBuffer.getChannelData(0)));
+    }
     this.source.connect(this.node);
     this.node.connect(this.ctx.destination);
-    if (!this.rec) $("status").textContent = "Слушаю · подготовка Vosk";
+    if (!this.onSegment && !this.rec)
+      $("status").textContent = "Слушаю · подготовка Vosk";
     const model = await modelPromise;
     if (this.closed) return;
     const rec = (this.rec = new model.KaldiRecognizer(rate));
+    rec.setWords(true);
     rec.on("error", (m) => this.fail(Error(m.error)));
     rec.on("partialresult", (m) => {
-      if (!this.closed) this.emit(m.result.partial);
+      if (!this.closed && !this.onSegment) this.emit(m.result.partial);
     });
     rec.on("result", (m) => {
       if (this.closed) return;
       const text = m.result.text?.trim();
-      if (text) this.segments.push(text);
+      if (this.onSegment) {
+        if (text)
+          this.onSegment(
+            text,
+            !!m.result.result?.some(
+              (w) => Number.isFinite(w.conf) && w.conf < 0.7,
+            ),
+          );
+        return;
+      }
+      if (text) {
+        this.segments.push(text);
+        if (
+          m.result.result?.some((w) => Number.isFinite(w.conf) && w.conf < 0.7)
+        )
+          this.uncertain = true;
+      }
       this.emit("");
       if (m.final) {
         this.abort();
@@ -115,7 +154,8 @@ class OfflineRecognizer {
     });
     for (const a of this.queue) rec.acceptWaveformFloat(a, rate);
     this.queue = [];
-    if (this.ending) rec.retrieveFinalResult();
+    if (this.ending && this.drained) rec.retrieveFinalResult();
+    else if (this.onSegment) this.onReady?.();
     else $("status").textContent = "Слушаю вас · локально";
   }
   emit(partial) {
@@ -124,6 +164,10 @@ class OfflineRecognizer {
   }
   disconnect() {
     if (this.node) {
+      if (this.node.port) {
+        this.node.port.onmessage = null;
+        this.node.port.close();
+      }
       this.node.onaudioprocess = null;
       this.node.disconnect();
       this.node = null;
@@ -139,6 +183,17 @@ class OfflineRecognizer {
   stop() {
     if (this.closed || this.ending) return;
     this.ending = true;
+    if (this.worklet && this.node) {
+      this.node.port.postMessage("flush");
+      this.flushTimeout = setTimeout(() => this.endCapture(), 500);
+      return;
+    }
+    this.endCapture();
+  }
+  endCapture() {
+    if (this.closed || this.drained) return;
+    clearTimeout(this.flushTimeout);
+    this.drained = true;
     this.disconnect();
     if (!this.gotAudio) {
       this.abort();
@@ -172,6 +227,7 @@ class OfflineRecognizer {
   }
   abort() {
     this.closed = true;
+    clearTimeout(this.flushTimeout);
     clearTimeout(this.timer);
     this.disconnect();
     this.rec?.remove();

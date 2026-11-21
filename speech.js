@@ -80,7 +80,8 @@ async function neuralSpeak(text, speaker, rate, preview) {
     else $("status").textContent = s;
   };
   state("think");
-  message("Готовлю голос…");
+  const clone = speaker === "clone:xtts";
+  message(clone ? "Синтезирую вашим голосом · XTTS" : "Готовлю голос…");
   try {
     if (audioGraph?.state === "running") {
       j.node = audioGraph.createMediaElementSource(j.audio);
@@ -91,9 +92,11 @@ async function neuralSpeak(text, speaker, rate, preview) {
     }
     for (const part of speechChunks(text)) {
       if (voiceJob !== j) return;
-      const res = await fetch("/api/speech", {
+      const res = await fetch(clone ? "/api/clone/speech" : "/api/speech", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: clone
+          ? Facts.headers()
+          : { "Content-Type": "application/json" },
         body: JSON.stringify({ text: part, speaker }),
         signal: j.abort.signal,
       });
@@ -117,7 +120,9 @@ async function neuralSpeak(text, speaker, rate, preview) {
           state("talk");
           if (preview)
             message(
-              "Проба голоса · " + roster.find((v) => v[0] === speaker)?.[1],
+              clone
+                ? "Проба вашего голоса · XTTS"
+                : "Проба голоса · " + roster.find((v) => v[0] === speaker)?.[1],
             );
         };
         j.audio.play().catch(no);
@@ -143,6 +148,10 @@ async function neuralSpeak(text, speaker, rate, preview) {
       $("voiceInfo").textContent = msg;
       return;
     }
+    if (clone) {
+      notice(msg + " Ответ оставлен в чате.");
+      return;
+    }
     notice(msg + (synth ? " Использую системную озвучку." : ""));
     systemSpeak(text, "", rate, false);
   }
@@ -154,7 +163,8 @@ function speak(text, preview = false) {
   if (!preview && !prefs.sound) return;
   const selected = preview ? $("voices").value : voiceChoice(),
     rate = preview ? $("rate").value : prefs.rate;
-  if (selected.startsWith("neural:"))
+  if (selected === "clone:xtts") neuralSpeak(text, selected, rate, preview);
+  else if (selected.startsWith("neural:"))
     neuralSpeak(text, selected.slice(7), rate, preview);
   else systemSpeak(text, selected === "system" ? "" : selected, rate, preview);
 }

@@ -832,3 +832,17 @@ dialog {
 #sceneMsg:not(:empty) {
   color: #c2b1df;
 }
+
+#memoryDialog .memCheck{display:flex;align-items:center;gap:9px}#memoryDialog .memCheck input{width:auto;accent-color:#b59bdf}#memStatus{color:#cbb5ec}
+
+#dueBox{padding:12px 16px;margin-bottom:16px;background:#30283d;border:1px solid #7f699e;border-radius:12px}#bookRows{max-height:210px;overflow:auto;font-size:13px}.bookRow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;overflow-wrap:anywhere}.bookRow span{min-width:0;white-space:pre-wrap}.bookRow button{flex-shrink:0}#memoryDialog a{color:#cbb2ff}
+
+#contactRows{max-height:200px;overflow:auto;font-size:13px}.personEditor{padding:4px 12px 12px;border-radius:10px;background:#20212c}#contactRows .bookRow span{flex:1}
+
+#notebookContacts{max-height:220px;overflow:auto;margin:8px 0 18px}#notebookContacts details{padding:8px 10px;margin:4px 0;background:#242330;border-radius:7px}#notebookContacts summary{cursor:pointer;font-size:13px}
+
+#factRows{max-height:250px;overflow:auto;font-size:14px}#factInput{background:#22232e;color:inherit;border:1px solid #46434f;border-radius:6px;padding:8px;resize:vertical;font:inherit}
+
+.wakeBar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 16px}.wakeBar small{color:#b3afc0}.wakeBar [aria-pressed="true"]{border-color:#9c87d4;color:#e5d9ff}
+.clonePanel{border:1px solid #45404f;border-radius:12px;padding:12px;margin:14px 0}.clonePanel summary{cursor:pointer;font-weight:600}.clonePanel audio{width:100%;margin:8px 0}.clonePanel small{color:#b6b1c4}.clonePanel input[type=file]{max-width:100%}
+#cameraVideo{display:block;width:min(100%,380px);max-height:260px;object-fit:contain;background:#14121c;border-radius:10px;margin:12px 0;transform:scaleX(-1)}.cameraActions{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}#cameraForm{margin-top:8px}#cameraForm input{width:100%}#cameraStatus{color:#b9b6c8}

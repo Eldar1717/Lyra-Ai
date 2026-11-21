@@ -33,7 +33,7 @@ let prefs = load("lyra:prefs", {
     engine: "demo",
     voice: "",
     rate: 1,
-    model: "qwen2.5:3b",
+    model: "llama3.1:8b",
     sound: true,
   }),
   msgs = load("lyra:chat", []),
@@ -50,6 +50,7 @@ function notice(msg) {
 }
 function state(m) {
   mode = m;
+  window.wakeStateChanged?.();
   $("status").textContent = {
     idle: "Готова к разговору",
     listen: "Слушаю вас",
@@ -156,27 +157,38 @@ function persist() {
   msgs = msgs.slice(-100);
   store("lyra:chat", msgs);
 }
-async function send(s) {
+async function send(s, cameraAction = null) {
   s = s.trim().slice(0, 2000);
   if (!s) return;
   silence();
   const id = token;
   notice("");
   $("input").value = "";
-  msgs.push({ role: "user", content: s });
+  const cam = cameraAction || window.Camera?.intent(s);
+  msgs.push({ role: "user", content: s, ...(cam ? { camera: true } : {}) });
   persist();
   $("last").replaceChildren();
   line($("last"), msgs.at(-1));
   state("think");
   let a;
   try {
-    if (prefs.engine !== "demo") {
+    if (cam) ctrl = new AbortController();
+    const remembered = cam
+      ? await Camera.answer(cam, s, ctrl.signal)
+      : ((await dailyAnswer(s)) ??
+        (id === token ? await Facts.answer(s) : null));
+    if (id !== token) return;
+    if (remembered !== null) a = remembered;
+    else if (prefs.engine !== "demo") {
       ctrl = new AbortController();
       let r = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: Facts.wantsContext()
+          ? Facts.headers()
+          : { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: msgs.slice(-18),
+          messages: msgs.filter((m) => !m.camera).slice(-18),
+          useFacts: Facts.wantsContext(),
           model: prefs.model,
           engine: prefs.engine,
         }),
@@ -191,7 +203,11 @@ async function send(s) {
       a = demo(s);
     }
     if (id !== token) return;
-    msgs.push({ role: "assistant", content: a });
+    msgs.push({
+      role: "assistant",
+      content: a,
+      ...(cam ? { camera: true } : {}),
+    });
     persist();
     line($("last"), msgs.at(-1));
     state("idle");
@@ -255,6 +271,8 @@ function voiceList() {
     group.append(new Option(name + " · " + id, "neural:" + id)),
   );
   v.append(group);
+  if (window.cloneAvailable || chosen === "clone:xtts")
+    v.append(new Option("Мой голос · XTTS-v2", "clone:xtts"));
   const sys = document.createElement("optgroup");
   sys.label = "Голоса устройства";
   sys.append(new Option("Русский · системный", "system"));
@@ -275,6 +293,8 @@ const engineHelp = {
 function showSettings() {
   silence();
   $("engine").value = prefs.engine;
+  $("asrReview").value = prefs.asrReview || "smart";
+  $("asrFilter").value = prefs.asrFilter || "normal";
   $("asr").value = prefs.asr || "local";
   $("micMode").value = prefs.micMode || "hold";
   $("rate").value = prefs.rate;
@@ -283,6 +303,7 @@ function showSettings() {
   $("voiceInfo").textContent = "Сравните голоса на одной и той же фразе.";
   $("engine").onchange();
   $("settingsDialog").showModal();
+  window.refreshClone?.();
 }
 $("engine").onchange = () => {
   let e = $("engine").value;
@@ -291,7 +312,7 @@ $("engine").onchange = () => {
   $("modelInfo").textContent = engineHelp[e] || "";
   $("model").value =
     (prefs.engine === e ? prefs.model : prefs.modelIds?.[e]) ||
-    (e === "ollama" ? "qwen2.5:3b" : "");
+    (e === "ollama" ? "llama3.1:8b" : "");
 };
 $("refresh").onclick = async () => {
   let e = $("engine").value;
@@ -329,6 +350,8 @@ $("save").onclick = () => {
   Object.assign(prefs, {
     micMode: $("micMode").value,
     asr: $("asr").value,
+    asrReview: $("asrReview").value,
+    asrFilter: $("asrFilter").value,
     engine: e,
     model: m,
     rate: $("rate").value,
