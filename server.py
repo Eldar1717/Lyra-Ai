@@ -27,19 +27,48 @@ import sqlite3
 import vision
 import clone_voice
 import ipaddress
+import modules_loader
 facts=Facts()
+modules=modules_loader.Modules()
 
 class App(SimpleHTTPRequestHandler):
     def result(self,status,data):
         out=json.dumps(data,ensure_ascii=False).encode();self.send_response(status); self.send_header('Content-Type','application/json; charset=utf-8'); self.send_header('Cache-Control','no-store'); self.send_header('Content-Length',str(len(out))); self.end_headers()
         try:self.wfile.write(out)
         except (BrokenPipeError,ConnectionResetError):pass
+    def module_static(self,path):
+        rest=path[len('/modules/'):]
+        mid,_,tail=rest.partition('/')
+        try:
+            if not modules_loader.serve_file(mid,tail,modules):raise ValueError('no')
+        except (ValueError,OSError):return self.send_error(404)
+        return super().do_GET()
+    def module_api(self,mid):
+        try:
+            n=int(self.headers.get('Content-Length',0))
+            if not 0<=n<=1024*1024:raise ValueError('Некорректный размер запроса.')
+            raw=self.rfile.read(n) if n else b'{}'
+            out=modules.handle_api(mid,json.loads(raw))
+        except PermissionError as e:return self.result(403,{'error':str(e)})
+        except (TypeError,KeyError,ValueError) as e:return self.result(400,{'error':str(e)})
+        except OSError as e:return self.result(503,{'error':str(e) or 'Модуль недоступен.'})
+        except Exception as e:return self.result(500,{'error':'Ошибка модуля «%s»: %s'%(mid,str(e)[:200])})
+        return self.result(200,out)
+    def redirect(self,where):
+        self.send_response(302);self.send_header('Location',where);self.send_header('Content-Length','0');self.end_headers()
     def proxy(self,engine,listing=False,body=None):
         try:self.result(200,upstream(engine,listing,body))
         except urllib.error.HTTPError as e:self.result(502,{'error':f'Сервер моделей вернул {e.code}. Проверьте модель, адрес и ключ API.'})
         except (OSError,ValueError,IndexError,KeyError,TypeError):self.result(503,{'error':'Сервер моделей недоступен или вернул неожиданный ответ. Проверьте подключение.'})
     def do_GET(self):
         url=urlsplit(self.path)
+        if url.path in ('/vakhta','/vakhta/','/vakhta.html'):
+            return self.redirect('/modules/vakhta/')
+        if url.path=='/api/modules':
+            try:return self.result(200,modules.list())
+            except (ValueError,OSError):return self.result(503,{'error':'Не удалось прочитать папку modules.'})
+        if url.path.startswith('/modules/'):
+            return self.module_static(url.path)
         if url.path=='/api/weather':
             q=parse_qs(url.query)
             try: result=lookup(q.get('city',[''])[0],q.get('day',[''])[0]=='tomorrow')
@@ -53,7 +82,7 @@ class App(SimpleHTTPRequestHandler):
             'face_landmark_68_tiny_model-shard1','face_landmark_68_tiny_model-weights_manifest.json',
             'face_recognition_model-shard1','face_recognition_model-shard2','face_recognition_model-weights_manifest.json')}:return super().do_GET()
         if url.path=='/api/models':self.proxy(parse_qs(url.query).get('engine',[''])[0],True)
-        elif url.path in ('/','/index.html','/app.js','/avatar.js','/photo.js','/voice.js','/style.css','/audio-capture.js','/local-asr.js','/matte.js','/speech.js','/background.js','/memory.js','/daily.js','/clone-ui.js','/camera.js') or url.path in {'/assets/'+x for x in ['night.jpg','lyra.webp','eyes.png','lips.png','forest.jpg','loft.jpg','asr/vosk.js','asr/ru-small.tar.gz']}:super().do_GET()
+        elif url.path in ('/','/index.html','/app.js','/avatar.js','/photo.js','/voice.js','/style.css','/audio-capture.js','/local-asr.js','/matte.js','/speech.js','/background.js','/memory.js','/daily.js','/clone-ui.js','/camera.js','/modules-ui.js') or url.path in {'/assets/'+x for x in ['night.jpg','lyra.webp','eyes.png','lips.png','forest.jpg','loft.jpg','asr/vosk.js','asr/ru-small.tar.gz']}:super().do_GET()
         else:self.send_error(404)
     def do_POST(self):
         if self.headers.get('Origin') and urlsplit(self.headers['Origin']).netloc!=self.headers.get('Host'):return self.send_error(403)
@@ -90,6 +119,14 @@ class App(SimpleHTTPRequestHandler):
             try:self.wfile.write(audio)
             except (BrokenPipeError,ConnectionResetError):pass
             return
+        if self.path=='/api/modules':
+            try:
+                n=int(self.headers.get('Content-Length',0))
+                if not 0<n<=65536:raise ValueError('Некорректный размер запроса.')
+                out=modules.handle(json.loads(self.rfile.read(n)))
+            except (TypeError,KeyError,ValueError) as e:return self.result(400,{'error':str(e)})
+            except OSError:return self.result(503,{'error':'Не удалось сохранить состояние модулей. Проверьте папку data.'})
+            return self.result(200,out)
         if self.path=='/api/facts':
             try:
                 n=int(self.headers.get('Content-Length',0))
@@ -110,6 +147,7 @@ class App(SimpleHTTPRequestHandler):
             try:self.wfile.write(audio)
             except (BrokenPipeError,ConnectionResetError):pass
             return
+        if self.path.startswith('/api/') and self.path!='/api/chat':return self.module_api(self.path[5:])
         if self.path!='/api/chat':return self.send_error(404)
         try:
             size=int(self.headers.get('Content-Length',0))

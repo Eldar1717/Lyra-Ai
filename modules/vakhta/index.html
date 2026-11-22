@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="ru">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0a0b11" />
+  <title>ИИ-вахтёр — Лира</title>
+  <link rel="stylesheet" href="module.css" />
+  <body class="vk">
+    <header class="vk-top">
+      <a class="vk-brand" href="/" title="Вернуться в Лиру">
+        <svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
+          <g stroke="currentColor" stroke-width="1.8" transform="rotate(-38 20 20)">
+            <ellipse cx="20" cy="20" rx="17" ry="8" />
+            <ellipse cx="20" cy="20" rx="10" ry="16" />
+          </g>
+          <circle cx="20" cy="20" r="3.2" fill="currentColor" /></svg
+        >ИИ-ВАХТЁР <span>ЛИРА · ПОДЪЕЗД</span>
+      </a>
+      <div class="vk-topline" id="vkTopStatus" data-live="0">Дежурство не начато</div>
+      <nav class="vk-nav">
+        <button class="vk-btn" id="btnRegistry">Жильцы</button>
+        <button class="vk-btn" id="btnJournal">Журнал</button>
+        <button class="vk-btn" id="btnSettings">Настройки</button>
+        <button class="vk-btn" id="btnKioskTop" title="Экран у двери: Лира крупно">⛶</button>
+        <a class="vk-btn" href="/">Лира</a>
+      </nav>
+    </header>
+
+    <main class="vk-main">
+      <section class="vk-stage">
+        <div class="vk-frame" id="vkFrame">
+          <video id="vkVideo" playsinline muted autoplay></video>
+          <canvas id="vkBox" aria-hidden="true"></canvas>
+          <div class="vk-hint" id="vkHint">
+            <div>
+              <b>Камера выключена</b>Нажмите «Начать дежурство» — вахтёр посмотрит в
+              камеру и заговорит. Без камеры можно нажать «Проверить по фото» или
+              «Демо-сценарии».
+            </div>
+          </div>
+          <div class="vk-badge" id="vkBadge" data-tone="idle">нет в кадре</div>
+          <div class="vk-door" id="vkDoor">ДВЕРЬ ОТКРЫТА</div>
+          <div class="vk-heard" id="vkHeard" hidden></div>
+          <div class="vk-say" id="vkSay" aria-live="assertive"></div>
+        </div>
+
+        <div class="vk-controls">
+          <button class="vk-btn primary" id="btnDuty">Начать дежурство</button>
+          <button class="vk-btn" id="btnPhoto">Проверить по фото</button>
+          <input type="file" id="vkPhotoInput" accept="image/*" hidden />
+          <button class="vk-btn" id="btnDemoBar" aria-expanded="false">
+            Демо-сценарии
+          </button>
+        </div>
+
+        <div class="vk-demo" id="vkDemo" hidden>
+          <span>Прогнать сценарий:</span>
+          <button class="vk-btn" data-demo="resident">Свой жилец</button>
+          <button class="vk-btn" data-demo="guest">Гость из списка</button>
+          <button class="vk-btn" data-demo="unknown">Чужой</button>
+          <button class="vk-btn" data-demo="denied">Нежелательный</button>
+          <button class="vk-btn" data-demo="answer">Ответ «я в 42»</button>
+          <button class="vk-btn" data-demo="refuse">Ответ «открой»</button>
+          <button class="vk-btn" data-demo="leave">Человек ушёл</button>
+        </div>
+      </section>
+
+      <aside class="vk-side">
+        <div class="vk-lyraCard">
+          <div class="vk-lyraFrame" id="vkLyraFrame">
+            <canvas id="vkLyra" width="576" height="768" aria-label="Портрет Лиры"></canvas>
+          </div>
+          <div class="vk-lyraInfo">
+            <small>ВАХТЁР · <span id="vkLyraWho">ЛИРА</span></small>
+            <b id="vkLyraState">ждёт у двери</b>
+            <p id="vkLyraHint">
+              Губы двигаются вместе с репликой, взгляд следит за гостем.
+            </p>
+            <div class="vk-lyraBtns">
+              <button type="button" class="vk-btn primary" id="btnKiosk">
+                Во весь экран
+              </button>
+              <button type="button" class="vk-btn" id="btnPortrait" title="Взять персонажа с главной страницы Лиры">
+                Портрет из Лиры
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="vk-card">
+          <div class="vk-face">
+            <canvas id="vkCrop" width="180" height="180"></canvas>
+            <span id="vkFaceEmpty">лицо не распознано</span>
+          </div>
+          <dl class="vk-who">
+            <div><dt>Кто</dt><dd id="vkName">—</dd></div>
+            <div><dt>Квартира</dt><dd id="vkFlat">—</dd></div>
+            <div><dt>Статус</dt><dd id="vkRole">—</dd></div>
+            <div><dt>Совпадение</dt><dd id="vkDistance">—</dd></div>
+          </dl>
+        </div>
+
+        <form class="vk-answer" id="vkAnswerForm" hidden>
+          <label for="vkAnswerInput">Гость отвечает — «зачем пришёл»</label>
+          <div class="vk-row">
+            <input
+              id="vkAnswerInput"
+              placeholder="Например: к Ивановым в 42"
+              autocomplete="off"
+              maxlength="200"
+            />
+            <button class="vk-btn primary" type="submit">Ответ</button>
+          </div>
+          <button class="vk-btn" type="button" id="btnListen">
+            🎙 Сказать голосом (локально, Vosk)
+          </button>
+          <p class="vk-note" id="vkAsrHint">
+            Речь распознаётся на этом компьютере. Если микрофон недоступен —
+            введите ответ в поле выше.
+          </p>
+        </form>
+
+        <div class="vk-logbox">
+          <h3>События дежурства</h3>
+          <ol class="vk-log" id="vkLog">
+            <li class="vk-empty">Пока пусто.</li>
+          </ol>
+        </div>
+      </aside>
+      <div class="vk-kiosk" id="vkKiosk" hidden>
+        <div class="vk-kioskLeft">
+          <div class="vk-kioskFrame" id="vkKioskFrame"></div>
+          <div class="vk-kioskName" id="vkKioskName">ВАХТЁР · ЛИРА</div>
+        </div>
+        <div class="vk-kioskRight">
+          <div class="vk-kioskBadge" id="vkKioskBadge" data-tone="idle">нет в кадре</div>
+          <div class="vk-kioskDoor" id="vkKioskDoor" aria-hidden="true">Дверь открыта</div>
+          <div class="vk-kioskSay" id="vkKioskSay" aria-live="assertive"></div>
+          <div class="vk-kioskHeard" id="vkKioskHeard" hidden></div>
+          <div class="vk-kioskFoot">
+            <span id="vkKioskWhere">дежурство не начато</span>
+            <button type="button" class="vk-btn" id="btnKioskExit">Выйти (Esc)</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Реестр жильцов -->
+    <dialog class="vk-dialog" id="dlgRegistry">
+      <form method="dialog" class="vk-dialog-head">
+        <h2>Жильцы, гости и нежелательные посетители</h2>
+        <button class="vk-btn" value="close">Закрыть</button>
+      </form>
+      <div class="vk-dialog-body">
+        <div class="vk-regTools">
+          <label class="vk-search">
+            <input id="vkRegSearch" type="search" placeholder="Поиск: имя или квартира" autocomplete="off" />
+          </label>
+          <div class="vk-filters" id="vkRegFilters" role="group" aria-label="Фильтр по роли">
+            <button type="button" class="vk-btn" data-role="" aria-pressed="true">Все</button>
+            <button type="button" class="vk-btn" data-role="resident" aria-pressed="false">Жильцы</button>
+            <button type="button" class="vk-btn" data-role="guest" aria-pressed="false">Гости</button>
+            <button type="button" class="vk-btn" data-role="denied" aria-pressed="false">Не пускать</button>
+          </div>
+        </div>
+        <p class="vk-regCount" id="vkRegCount"></p>
+        <button type="button" class="vk-btn primary vk-addToggle" id="eToggle">
+          + Добавить человека
+        </button>
+        <div class="vk-regList" id="vkRegistryList"></div>
+
+        <form class="vk-enroll" id="vkEnrollForm">
+          <h3 id="eTitle">Добавить человека</h3>
+          <div class="vk-editor">
+            <div class="vk-photoBox">
+              <img id="ePhotoImg" alt="Фото жильца" hidden />
+              <span id="ePhotoEmpty">нет фото</span>
+              <button type="button" class="vk-btn" id="ePhotoClear" hidden>
+                Убрать
+              </button>
+            </div>
+            <div class="vk-editorFields">
+              <label
+                >Имя и отчество<input
+                  id="eName"
+                  maxlength="64"
+                  required
+                  placeholder="Иван Петров"
+              /></label>
+              <div class="grid2">
+                <label
+                  >Квартира<input
+                    id="eFlat"
+                    maxlength="12"
+                    placeholder="42"
+                    list="eFlatList"
+                    autocomplete="off"
+                  /><datalist id="eFlatList"></datalist
+                ></label>
+                <label
+                  >Роль<select id="eRole">
+                    <option value="resident">Жилец — здороваться и пускать</option>
+                    <option value="guest">Гость — его ждут, пускать</option>
+                    <option value="denied">Нежелательный — не пускать</option>
+                  </select></label
+                >
+              </div>
+              <label
+                >Примечание<input
+                  id="eNote"
+                  maxlength="200"
+                  placeholder="например: сын, бывает по выходным"
+              /></label>
+            </div>
+          </div>
+
+          <div class="vk-samples">
+            <div class="vk-samples-head">
+              <span>Новые шаблоны лица: <b id="eCount">0</b>/5</span>
+              <button type="button" class="vk-btn" id="eShoot">
+                Снять с камеры
+              </button>
+              <label class="vk-btn"
+                >Загрузить фото<input
+                  type="file"
+                  id="ePhotos"
+                  accept="image/*"
+                  multiple
+                  hidden
+              /></label>
+              <button type="button" class="vk-btn" id="eClear">Очистить</button>
+            </div>
+            <p class="vk-note">
+              Хватит одного кадра, лучше три: прямо, чуть влево, чуть вправо. В
+              реестре хранятся только числовые шаблоны (128 чисел на кадр) и
+              маленькая миниатюра для карточки — фото на сервер не уходит. Снимайте
+              человека с его согласия.
+            </p>
+            <div class="vk-status" id="eStatus"></div>
+          </div>
+
+          <div class="vk-row">
+            <button type="submit" class="vk-btn primary" id="eSave">
+              Сохранить
+            </button>
+            <button type="button" class="vk-btn" id="eCancel" hidden>
+              Отмена
+            </button>
+          </div>
+        </form>
+      </div>
+    </dialog>
+
+    <!-- Журнал проходов -->
+    <dialog class="vk-dialog" id="dlgJournal">
+      <form method="dialog" class="vk-dialog-head">
+        <h2>Журнал проходов</h2>
+        <button class="vk-btn" value="close">Закрыть</button>
+      </form>
+      <div class="vk-dialog-body">
+        <div class="vk-reg">
+          <table>
+            <thead>
+              <tr>
+                <th>Время</th>
+                <th>Событие</th>
+                <th>Кто</th>
+                <th>Квартира</th>
+                <th>Решение</th>
+              </tr>
+            </thead>
+            <tbody id="vkJournalRows"></tbody>
+          </table>
+        </div>
+        <p class="vk-note">
+          Журнал хранится в <code>data/vakhta-visits.jsonl</code> на компьютере с
+          вахтёром. Фотографии не сохраняются.
+        </p>
+      </div>
+    </dialog>
+
+    <!-- Настройки -->
+    <dialog class="vk-dialog" id="dlgSettings">
+      <form method="dialog" class="vk-dialog-head">
+        <h2>Настройки вахтёра</h2>
+        <button class="vk-btn" value="close">Закрыть</button>
+      </form>
+      <div class="vk-dialog-body">
+        <div class="vk-settings">
+          <div class="field">
+            <label for="sThreshold"
+              >Строгость распознавания: <output id="sThresholdOut">0.52</output></label
+            >
+            <input
+              type="range"
+              id="sThreshold"
+              min="0.35"
+              max="0.65"
+              step="0.01"
+              value="0.52"
+            />
+            <p class="vk-note">
+              Меньше значение — строже: меньше шансов пустить чужого, больше
+              шансов не узнать своего. 0.45–0.50 для реальной двери, 0.55 — для
+              демонстрации.
+            </p>
+          </div>
+          <div class="field">
+            <label for="sCooldown"
+              >Не здороваться повторно, секунд:
+              <output id="sCooldownOut">45</output></label
+            >
+            <input type="range" id="sCooldown" min="10" max="180" step="5" value="45" />
+          </div>
+          <div class="field">
+            <label for="sAnswer"
+              >Ждать ответ гостя, секунд:
+              <output id="sAnswerOut">20</output></label
+            >
+            <input type="range" id="sAnswer" min="8" max="60" step="2" value="20" />
+          </div>
+          <div class="field">
+            <label for="sVoice">Голос</label>
+            <select id="sVoice">
+              <option value="neural:aidar">Айдар (Silero, мужской)</option>
+              <option value="neural:eugene">Евгений (Silero, мужской)</option>
+              <option value="neural:xenia">Ксения (Silero, женский)</option>
+              <option value="neural:baya">Бая (Silero, женский)</option>
+              <option value="system">Системный голос браузера</option>
+              <option value="silent">Без звука — только текст</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="vk-chip"
+              ><input type="checkbox" id="sSpeak" checked /> Говорить вслух</label
+            >
+          </div>
+          <div class="field">
+            <label class="vk-chip"
+              ><input type="checkbox" id="sAutoListen" checked /> Слушать ответ
+              гостя автоматически</label
+            >
+            <p class="vk-note">
+              После вопроса «зачем пришли?» вахтёр сам включает микрофон
+              (локальный Vosk), ждёт ответа и не требует нажимать кнопку.
+            </p>
+          </div>
+          <div class="field">
+            <label class="vk-chip"
+              ><input type="checkbox" id="sPassDelivery" checked /> Пропускать
+              курьеров, назвавших квартиру</label
+            >
+            <p class="vk-note">
+              Курьер называет квартиру — вахтёр пускает его сразу и записывает
+              проход в журнал. Выключите, если курьеры тоже должны ждать
+              подтверждения жильца.
+            </p>
+          </div>
+          <div class="field">
+            <label class="vk-chip"
+              ><input type="checkbox" id="sPassGuests" /> Пропускать гостей,
+              назвавших квартиру</label
+            >
+            <p class="vk-note">
+              Выключено: гость называет квартиру, вахтёр сообщает жильцам, но дверь
+              сам не открывает. Включите, если курьерам и гостям нужно проходить
+              сразу, без подтверждения.
+            </p>
+          </div>
+          <div class="field">
+            <label for="sPin">PIN администратора (если включён на сервере)</label>
+            <input
+              type="password"
+              id="sPin"
+              placeholder="нужен для изменения реестра"
+              autocomplete="off"
+            />
+            <p class="vk-note">
+              PIN задаётся переменной окружения <code>VAKHTA_PIN</code> перед
+              запуском <code>server.py</code>. Хранится только в этом браузере.
+            </p>
+          </div>
+          <div class="vk-danger-zone">
+            <b>Удалить все шаблоны лиц</b>
+            <p class="vk-note">
+              Полностью очищает реестр вахты. Жильцов придётся записать заново.
+              Журнал проходов остаётся.
+            </p>
+            <button type="button" class="vk-btn danger" id="sForget">
+              Удалить биометрию всех жильцов
+            </button>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <div class="vk-toast" id="vkToast" role="status"></div>
+
+    <script src="logic.js"></script>
+    <script src="lyra.js"></script>
+    <script src="asr.js"></script>
+    <script src="module.js"></script>
+  </body>
+</html>

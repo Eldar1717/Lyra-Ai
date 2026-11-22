@@ -10,6 +10,10 @@ const paths = {
   chat: "M4 4h16v13H9l-5 4z M8 9h8m-8 4h5",
   send: "m3 11 17-7-5 16-4-6-8-3z M11 14l9-10",
   stop: "M6 6h12v12H6z",
+  // дверь рисуем в тех же границах, что «Модули» и «Настройки» (4…20),
+  // иначе иконка кажется ниже остальных и кнопка «плывёт»
+  door: "M6 20V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v15 M4 20h16 M11 12h.01",
+  modules: "M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z",
 };
 function icon(n) {
   return `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[n]}"/></svg>`;

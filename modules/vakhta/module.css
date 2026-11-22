@@ -1,0 +1,1250 @@
+/* Режим «ИИ-вахтёр» — тёмный киоск: камера крупно, крупный текст реплики. */
+.vk {
+  --bg: #0a0b11;
+  --panel: #12141d;
+  --panel-2: #171a25;
+  --line: #262a3a;
+  --ink: #f3f3f8;
+  --muted: #9aa0b5;
+  --violet: #b5a1ff;
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --bad: #fb7185;
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(1100px 620px at 12% -10%, #1b1b33 0%, transparent 62%),
+    radial-gradient(900px 520px at 108% 4%, #12222b 0%, transparent 58%),
+    var(--bg);
+  color: var(--ink);
+  font:
+    15px/1.45 -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Arial,
+    sans-serif;
+}
+.vk * {
+  box-sizing: border-box;
+}
+/* часть панелей ниже задаёт display: её нельзя победить атрибутом hidden */
+.vk [hidden] {
+  display: none !important;
+}
+.vk button,
+.vk input,
+.vk select {
+  font: inherit;
+  color: inherit;
+}
+.vk :focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 3px;
+}
+.vk-top {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(10, 11, 17, 0.82);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  flex-wrap: wrap;
+}
+.vk-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-decoration: none;
+  color: var(--ink);
+  font-size: 14px;
+}
+.vk-brand svg {
+  width: 26px;
+  height: 26px;
+  color: var(--violet);
+}
+.vk-brand span {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  border-left: 1px solid var(--line);
+  padding-left: 10px;
+}
+.vk-topline {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.vk-topline::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.vk-topline[data-live="1"]::before {
+  background: var(--ok);
+  box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.16);
+}
+.vk-nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.vk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 15px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background 0.16s,
+    border-color 0.16s,
+    transform 0.16s;
+  font-size: 14px;
+}
+.vk-btn:not(.primary):not(.danger):hover:not(:disabled) {
+  background: var(--panel-2);
+}
+.vk-btn:hover:not(:disabled) {
+  border-color: #3a4058;
+}
+.vk-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.vk-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+.vk-btn.primary {
+  background: linear-gradient(180deg, #a68dff, #8a6bff);
+  border-color: #8a6bff;
+  color: #120e22;
+  font-weight: 650;
+}
+.vk-btn.danger {
+  border-color: #5a2634;
+  color: #ffc2ce;
+  background: #2a1420;
+}
+.vk-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 372px;
+  gap: 18px;
+  padding: 18px 22px 26px;
+  align-items: start;
+}
+.vk-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.vk-frame {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #05060a;
+  border: 1px solid var(--line);
+  aspect-ratio: 16 / 10;
+  min-height: 320px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+.vk-frame video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: scaleX(-1);
+  opacity: 0.92;
+}
+.vk-frame canvas#vkBox {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.vk-hint {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 24px;
+  color: var(--muted);
+  background:
+    radial-gradient(600px 300px at 50% 40%, rgba(181, 161, 255, 0.12), transparent 70%),
+    #05060a;
+  font-size: 15px;
+  max-width: none;
+}
+.vk-hint b {
+  color: var(--ink);
+  display: block;
+  margin-bottom: 6px;
+  font-size: 18px;
+}
+.vk-badge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+  background: rgba(12, 14, 22, 0.72);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+}
+.vk-badge[data-tone="ok"] {
+  color: #0b1d12;
+  background: var(--ok);
+  border-color: var(--ok);
+}
+.vk-badge[data-tone="guest"] {
+  color: #23180a;
+  background: var(--warn);
+  border-color: var(--warn);
+}
+.vk-badge[data-tone="bad"] {
+  color: #2a0b13;
+  background: var(--bad);
+  border-color: var(--bad);
+}
+.vk-badge[data-tone="ask"] {
+  color: #150f2e;
+  background: var(--violet);
+  border-color: var(--violet);
+}
+.vk-say {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: rgba(8, 9, 15, 0.78);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(14px);
+  font-size: clamp(17px, 2.1vw, 25px);
+  line-height: 1.3;
+  font-weight: 600;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.22s,
+    transform 0.22s;
+}
+.vk-say.show {
+  opacity: 1;
+  transform: none;
+}
+.vk-say::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--violet);
+  flex: none;
+  box-shadow: 0 0 0 5px rgba(181, 161, 255, 0.15);
+}
+.vk-say.talking::before {
+  animation: vk-pulse 0.9s ease-in-out infinite;
+}
+@keyframes vk-pulse {
+  50% {
+    transform: scale(1.5);
+    opacity: 0.55;
+  }
+}
+.vk-heard {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 92px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(20, 22, 33, 0.86);
+  border: 1px dashed #3a4058;
+  color: #cfd3e4;
+  font-size: 14px;
+}
+.vk-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.vk-demo {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  background: rgba(18, 20, 29, 0.7);
+  font-size: 13px;
+  color: var(--muted);
+}
+.vk-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.vk-card {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #141724, #101220);
+  padding: 16px;
+  display: flex;
+  gap: 14px;
+}
+.vk-face {
+  position: relative;
+  width: 116px;
+  height: 116px;
+  border-radius: 16px;
+  background: #080a11;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+.vk-face canvas {
+  width: 100%;
+  height: 100%;
+  display: none;
+}
+.vk-face canvas.on {
+  display: block;
+}
+.vk-face span {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  padding: 8px;
+  line-height: 1.3;
+}
+.vk-who {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.vk-who div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+}
+.vk-who dt {
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.vk-who dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 62%;
+}
+.vk-answer {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+.vk-answer label {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.vk-row {
+  display: flex;
+  gap: 8px;
+}
+.vk-row input {
+  flex: 1;
+  min-width: 0;
+}
+.vk input,
+.vk select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: #0d0f18;
+}
+.vk-logbox {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+  padding: 14px 14px 6px;
+}
+.vk-logbox h3 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.vk-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 300px;
+  overflow: auto;
+  display: grid;
+  gap: 8px;
+}
+.vk-log li {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 8px;
+  font-size: 13px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #1c1f2c;
+  color: #cdd2e4;
+}
+.vk-log li time {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+.vk-log li[data-kind="denied"] b,
+.vk-log li[data-kind="danger"] b {
+  color: var(--bad);
+}
+.vk-log li[data-kind="resident"] b,
+.vk-log li[data-kind="unlock"] b {
+  color: var(--ok);
+}
+.vk-log li[data-kind="visitor"] b,
+.vk-log li[data-kind="delivery"] b,
+.vk-log li[data-kind="guest"] b {
+  color: var(--warn);
+}
+.vk-log .vk-empty {
+  color: var(--muted);
+  grid-template-columns: 1fr;
+}
+.vk-dialog {
+  width: min(880px, 94vw);
+  max-height: calc(100vh - 36px);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: #0e1018;
+  color: var(--ink);
+  padding: 0;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+.vk-dialog::backdrop {
+  background: rgba(5, 6, 10, 0.72);
+  backdrop-filter: blur(3px);
+}
+.vk-dialog-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+  margin: 0;
+}
+.vk-dialog-head h2 {
+  margin: 0;
+  font-size: 17px;
+}
+.vk-dialog-head .vk-btn {
+  margin-left: auto;
+}
+.vk-dialog-body {
+  padding: 16px 18px 20px;
+  display: grid;
+  gap: 16px;
+  max-height: 74vh;
+  overflow: auto;
+}
+.vk-reg table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.vk-reg th {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.vk-reg td {
+  padding: 8px;
+  border-bottom: 1px solid #1c1f2c;
+  vertical-align: middle;
+}
+.vk-reg .role {
+  font-size: 12px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+.vk-reg .role[data-r="resident"] {
+  color: var(--ok);
+  border-color: #22503a;
+}
+.vk-reg .role[data-r="guest"] {
+  color: var(--warn);
+  border-color: #574316;
+}
+.vk-reg .role[data-r="denied"] {
+  color: var(--bad);
+  border-color: #5a2634;
+}
+.vk-enroll {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+  padding: 16px;
+}
+.vk-enroll h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.vk-enroll label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.vk-enroll .grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.vk-samples {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.vk-samples-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.vk-samples-head span {
+  font-size: 13px;
+  color: var(--muted);
+}
+.vk-samples-head span b {
+  color: var(--ink);
+}
+.vk-samples-head label.vk-btn {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 14px;
+  color: var(--ink);
+}
+.vk-note {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.vk-status {
+  font-size: 13px;
+  min-height: 18px;
+}
+.vk-status.ok {
+  color: var(--ok);
+}
+.vk-status.bad {
+  color: var(--bad);
+}
+.vk-settings {
+  display: grid;
+  gap: 14px;
+}
+.vk-settings .field {
+  display: grid;
+  gap: 6px;
+}
+.vk-settings .field label {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.vk-settings .field output {
+  color: var(--ink);
+  font-weight: 600;
+}
+.vk-settings input[type="range"] {
+  padding: 0;
+  accent-color: var(--violet);
+  background: none;
+  border: none;
+}
+/* общее правило .vk input растягивало чекбоксы на всю ширину окна */
+.vk input[type="checkbox"],
+.vk input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  padding: 0;
+  margin: 0;
+  border-radius: 5px;
+  accent-color: var(--violet);
+  justify-self: start;
+}
+.vk-chip {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  cursor: pointer;
+  font-size: 13px;
+}
+.vk-danger-zone {
+  border: 1px solid #5a2634;
+  border-radius: 14px;
+  padding: 14px;
+  background: #1b1017;
+  display: grid;
+  gap: 10px;
+}
+.vk-danger-zone b {
+  color: #ffc2ce;
+}
+.vk-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translate(-50%, 20px);
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: #1b1e2c;
+  border: 1px solid var(--line);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+  z-index: 60;
+  max-width: 90vw;
+}
+.vk-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.vk-toast[data-tone="bad"] {
+  border-color: #5a2634;
+  color: #ffc2ce;
+}
+.vk-door {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: var(--ok);
+  color: #0b1d12;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+}
+.vk-door.show {
+  opacity: 1;
+  transform: none;
+}
+@media (max-width: 980px) {
+  .vk-main {
+    grid-template-columns: 1fr;
+  }
+  .vk-topline {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+  }
+}
+@media (max-width: 560px) {
+  .vk-main {
+    padding: 12px;
+  }
+  .vk-frame {
+    aspect-ratio: 4 / 3;
+    min-height: 240px;
+  }
+  .vk-say {
+    font-size: 17px;
+    padding: 12px 14px;
+  }
+  .vk-enroll .grid2 {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vk * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ---------- портрет Лиры в сайдбаре ---------- */
+.vk-lyraCard {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 12px 14px;
+  background:
+    radial-gradient(220px 160px at 8% 0%, rgba(181, 161, 255, 0.16), transparent 70%),
+    linear-gradient(180deg, #16182a, #101120);
+  overflow: hidden;
+}
+.vk-lyraFrame {
+  width: 90px;
+  height: 118px;
+  flex: none;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #322f48;
+  background: radial-gradient(circle at 50% 30%, #2a2545, #12131f 70%);
+}
+#vkLyra {
+  /* канвас 576×768 крупнее рамки: в кадре остаётся лицо и плечи */
+  width: 135px;
+  height: 180px;
+  margin: -21px 0 0 -21.5px;
+  display: block;
+  animation: vk-lyra-breath 5.6s ease-in-out infinite;
+}
+@keyframes vk-lyra-breath {
+  50% {
+    transform: translateY(-2px) scale(1.012);
+  }
+}
+.vk-lyraInfo {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.vk-lyraInfo small {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+.vk-lyraInfo b {
+  font-size: 15px;
+}
+.vk-lyraInfo p {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+/* ---------- реестр: карточки жильцов ---------- */
+.vk-regList {
+  display: grid;
+  gap: 10px;
+}
+.vk-person {
+  display: flex;
+  gap: 13px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--panel);
+  padding: 11px 13px;
+}
+.vk-person[data-role="denied"] {
+  border-color: #5a2634;
+  background: #1b1017;
+}
+.vk-person[data-role="guest"] {
+  border-color: #4b3f1d;
+}
+.vk-personPhoto {
+  width: 58px;
+  height: 58px;
+  flex: none;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #080a11;
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 17px;
+  color: #8d86a8;
+}
+.vk-personPhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.vk-personInfo {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.vk-personInfo b {
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vk-personMeta {
+  font-size: 12px;
+  color: var(--muted);
+}
+.vk-personInfo i {
+  font-size: 12px;
+  font-style: normal;
+  color: #8d86a8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vk-personActions {
+  display: flex;
+  gap: 7px;
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.vk-personActions .vk-btn {
+  padding: 7px 11px;
+  font-size: 13px;
+}
+
+/* ---------- редактор записи ---------- */
+.vk-editor {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.vk-photoBox {
+  position: relative;
+  width: 104px;
+  height: 104px;
+  flex: none;
+  border-radius: 14px;
+  border: 1px dashed #3a4058;
+  background: #080a11;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.vk-photoBox img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.vk-photoBox span {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 6px;
+  text-align: center;
+}
+.vk-photoBox .vk-btn {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  background: rgba(10, 11, 17, 0.86);
+}
+.vk-editorFields {
+  display: grid;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 620px) {
+  .vk-editor {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .vk-photoBox {
+    width: 84px;
+    height: 84px;
+  }
+  .vk-personActions {
+    justify-content: flex-start;
+  }
+}
+
+/* ---------- крупный портрет в карточке ---------- */
+.vk-lyraCard {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 10px;
+}
+.vk-lyraFrame {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 4;
+  max-height: 46vh;
+  border-radius: 14px;
+}
+#vkLyra {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  object-fit: contain;
+  border: 0;
+  background: transparent;
+  animation: none;
+}
+.vk-lyraInfo {
+  padding: 0 6px 6px;
+  gap: 5px;
+}
+.vk-lyraInfo b {
+  font-size: 16px;
+}
+.vk-lyraBtns {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.vk-lyraBtns .vk-btn {
+  flex: 1;
+  padding: 9px 10px;
+  font-size: 13px;
+}
+
+/* ---------- полноэкранный режим «экран у двери» ---------- */
+.vk-kiosk {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  background:
+    radial-gradient(70% 60% at 20% 0%, rgba(181, 161, 255, 0.14), transparent 70%),
+    radial-gradient(60% 50% at 90% 100%, rgba(90, 200, 255, 0.1), transparent 70%),
+    #05060a;
+}
+.vk-kiosk[hidden] {
+  display: none !important;
+}
+.vk-kioskLeft {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 2vh 0 2vh 2vw;
+  overflow: hidden;
+}
+.vk-kioskFrame {
+  height: 100%;
+  max-width: 100%;
+  aspect-ratio: 3 / 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.vk-kioskFrame canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.55));
+}
+.vk-kioskName {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.42);
+  white-space: nowrap;
+}
+.vk-kioskRight {
+  display: grid;
+  align-content: center;
+  gap: 18px;
+  padding: 5vh 3vw;
+  min-width: 0;
+}
+.vk-kioskBadge {
+  justify-self: start;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid #33384d;
+  color: #b9b4d4;
+}
+.vk-kioskBadge[data-tone="resident"] {
+  border-color: #245a3d;
+  color: #8efa9d;
+}
+.vk-kioskBadge[data-tone="guest"] {
+  border-color: #5d5324;
+  color: #ffe08a;
+}
+.vk-kioskBadge[data-tone="denied"],
+.vk-kioskBadge[data-tone="unknown"] {
+  border-color: #5a2634;
+  color: #ff9a9a;
+}
+.vk-kioskSay {
+  font-size: clamp(22px, 2.5vw, 46px);
+  line-height: 1.22;
+  font-weight: 650;
+  color: #f3f1ff;
+  min-height: 2.4em;
+}
+.vk-kioskHeard {
+  font-size: clamp(15px, 1.15vw, 21px);
+  color: #a9a3c9;
+}
+.vk-kioskFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: #7d7899;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 14px;
+}
+/* камера в полноэкранном режиме — маленькое окно в углу */
+body.kiosk .vk-top,
+body.kiosk .vk-side,
+body.kiosk .vk-controls,
+body.kiosk .vk-demo,
+body.kiosk .vk-kioskFoot span {
+  display: none !important;
+}
+body.kiosk .vk-main {
+  display: block;
+  padding: 0;
+}
+body.kiosk .vk-stage {
+  position: fixed;
+  right: 16px;
+  top: 16px;
+  bottom: auto;
+  z-index: 95;
+  width: min(260px, 22vw);
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #2a2d3d;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+  background: #07080d;
+}
+body.kiosk:not(.live) .vk-stage {
+  display: none; /* без дежурства камера выключена — нечего показывать */
+}
+body.kiosk .vk-stage .vk-badge,
+body.kiosk .vk-stage .vk-door,
+body.kiosk .vk-stage .vk-say,
+body.kiosk .vk-stage .vk-hint,
+body.kiosk .vk-stage .vk-heard {
+  display: none;
+}
+body.kiosk .vk-frame {
+  aspect-ratio: 4 / 3;
+}
+@media (max-width: 900px) {
+  .vk-kiosk {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .vk-kioskRight {
+    padding: 2vh 5vw 3vh;
+    gap: 12px;
+    align-content: start;
+  }
+  .vk-kioskSay {
+    font-size: clamp(20px, 6vw, 30px);
+    min-height: 0;
+  }
+  .vk-kioskFoot {
+    margin-top: 4px;
+  }
+}
+
+/* ---------- реестр: поиск, фильтры и группы по квартирам ---------- */
+.vk-regTools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.vk-search {
+  flex: 1 1 220px;
+  min-width: 160px;
+}
+.vk-search input {
+  width: 100%;
+  padding: 10px 13px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: #0d0f18;
+  color: inherit;
+  font: inherit;
+}
+.vk-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.vk-filters .vk-btn {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.vk-filters .vk-btn[aria-pressed="true"] {
+  border-color: #6a5ce0;
+  background: #1d1a33;
+  color: #ded9ff;
+}
+.vk-regCount {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.vk-room {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #101220;
+  overflow: hidden;
+}
+.vk-roomHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 13px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.vk-roomHead:hover {
+  background: #161a2b;
+}
+.vk-roomHead b {
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vk-roomCount {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.vk-roomArrow {
+  margin-left: auto;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+  flex: none;
+}
+.vk-room[data-open="true"] .vk-roomArrow {
+  transform: rotate(90deg);
+}
+.vk-roomBody {
+  display: grid;
+  gap: 8px;
+  padding: 2px 10px 10px;
+}
+.vk-room[data-open="false"] .vk-roomBody {
+  display: none;
+}
+.vk-roomBody .vk-person {
+  background: #0c0e18;
+}
+
+.vk-kioskDoor {
+  justify-self: start;
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: #12452c;
+  color: #b6ffcd;
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.vk-kioskDoor.show {
+  opacity: 1;
+  transform: none;
+}
+
+/* форма добавления в большой базе свёрнута, её раскрывает кнопка */
+.vk-addToggle {
+  align-self: start;
+  justify-self: start;
+}
+#dlgRegistry .vk-enroll {
+  display: none;
+}
+#dlgRegistry.formOpen .vk-enroll {
+  display: grid;
+  gap: 14px;
+}

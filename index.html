@@ -22,9 +22,23 @@
             <circle cx="20" cy="20" r="3.2" fill="currentColor" /></svg
           >Лира <span class="brandtag">AI COMPANION</span>
         </div>
-        <button class="settings" onclick="showSettings()">
-          <i data-i="sliders"></i><span>Настройки</span>
-        </button>
+        <div class="topActions">
+          <a
+            class="settings"
+            id="headerVakhta"
+            href="/modules/vakhta/"
+            title="ИИ-вахтёр: узнаёт жильцов по лицу"
+            hidden
+          >
+            <i data-i="door"></i><span>Вахтёр</span>
+          </a>
+          <button class="settings" id="openModules">
+            <i data-i="modules"></i><span>Модули</span>
+          </button>
+          <button class="settings" onclick="showSettings()">
+            <i data-i="sliders"></i><span>Настройки</span>
+          </button>
+        </div>
       </div>
     </header>
     <main>
@@ -371,6 +385,36 @@
         ><button class="primary" id="sceneDone">Готово</button>
       </div>
     </dialog>
+    <dialog id="modulesDialog" class="modulesDialog" aria-labelledby="modTitle">
+      <div class="modalhead">
+        <div>
+          <small class="sceneKicker">MODULES</small>
+          <h3 id="modTitle">Модули</h3>
+        </div>
+        <button
+          class="close"
+          aria-label="Закрыть"
+          onclick="this.closest('dialog').close()"
+        >
+          ×
+        </button>
+      </div>
+      <p>
+        Модуль — отдельная папка в <code>modules/</code>. Включённый модуль
+        открывается по своему адресу и получает собственный адрес API; выключенный
+        не отдаёт ни страницу, ни данные.
+      </p>
+      <div id="moduleList" role="list"></div>
+      <p id="modulesMsg" role="status"></p>
+      <p class="modHelp">
+        Свой модуль: папка <code>modules/имя/</code> с файлом
+        <code>module.json</code> и страницей <code>index.html</code>, при
+        необходимости — <code>backend.py</code> с функцией
+        <code>handle(action, data)</code>. Он появится в этом списке после
+        обновления страницы. Модули выполняются с правами сервера Лиры: ставьте
+        только тот код, которому доверяете.
+      </p>
+    </dialog>
     <dialog id="memoryDialog" aria-labelledby="memTitle">
       <div class="modalhead">
         <div>
@@ -490,6 +534,7 @@
       <button class="textBtn" id="restore">Вернуть портрет Лиры</button>
     </dialog>
     <script src="app.js"></script>
+    <script src="modules-ui.js"></script>
     <script src="memory.js"></script>
     <script src="daily.js"></script>
     <script src="speech.js"></script>
